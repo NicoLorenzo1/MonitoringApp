@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s  # Intervalo para recopilar métricas
+
+scrape_configs:
+  # Configuración para monitorear  aplicación
+  - job_name: 'aws_app'
+    static_configs:
+      - targets: ['52.14.116.179:3000'] 
+
+  # Configuración para Node Exporter
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['52.14.116.179:9100']  # Dirección IP y puerto de Node Exporter
