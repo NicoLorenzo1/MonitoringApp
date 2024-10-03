@@ -1,46 +1,45 @@
 const express = require('express');
-const { collectDefaultMetrics, register, Histogram } = require('prom-client');
+const prometheusMiddleware = require('express-prometheus-middleware');
 
 const app = express();
 
-// Recopilar métricas por defecto
-collectDefaultMetrics();
+app.use(prometheusMiddleware({
+    metricsPath: '/metrics', // Ruta donde se expondrán las métricas.
+    collectDefaultMetrics: true, // Recoge métricas por defecto de Node.js
+    requestDurationBuckets: [0.1, 0.5, 1, 1.5], // Configura los rangos de duración de solicitudes HTTP
+  }));
 
-// Crear un Histogram para la duración de las solicitudes
-const httpRequestDurationMicroseconds = new Histogram({
-  name: 'nodejs_http_request_duration_seconds',
-  help: 'Duration of HTTP requests in microseconds',
-  labelNames: ['method', 'status_code'], // etiquetas para el método y el código de estado
+
+const port = process.env.PORT || 3000;
+app.listen(port, '0.0.0.0', () => {
+  console.log('Server is running on port 3000');
 });
 
-// Middleware para medir la duración de las solicitudes
-app.use((req, res, next) => {
-  // Registrar el inicio del tiempo
-  const start = Date.now();
-  // Esperar hasta que se complete la respuesta
-  res.on('finish', () => {
-    // Calcular la duración
-    const duration = (Date.now() - start) / 1000; // Convierte a segundos
-    // Registrar la duración en el Histogram con el método y el código de estado
-    httpRequestDurationMicroseconds
-      .labels(req.method, res.statusCode)
-      .observe(duration);
-  });
-  next();
-});
-
-// Ruta para las métricas
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
 
 // Ruta de prueba
 app.get('/', (req, res) => {
   res.send('API is running!');
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, '0.0.0.0', () => {
-  console.log('Server is running on port 3000');
-});
+// Endpoint que simula una operación larga
+app.get('/long-process', (req, res) => {
+    // Simular un retraso de 2 segundos
+    setTimeout(() => {
+      res.send('Long process completed!');
+    }, 2000); // 2000 ms = 2 segundos
+  });
+  
+  // Otro endpoint que simula un proceso más corto
+  app.get('/short-process', (req, res) => {
+    // Simular un retraso de 500 ms
+    setTimeout(() => {
+      res.send('Short process completed!');
+    }, 500); // 500 ms = 0.5 segundos
+  });
+  
+  // Endpoint que simula un error
+  app.get('/error', (req, res) => {
+    res.status(500).send('Internal Server Error!');
+  });
+
+
